@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Unit Manager</AssemblyName>
+    <RootNamespace>FileViewer</RootNamespace>
+    <Product>Unit Manager</Product>
+    <ApplicationIcon>Assets/UnitManager.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/GuaroaSoftware.jpg" />
+    <EmbeddedResource Include="Assets/UnitManager.ico" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="4.0.2" />
+  </ItemGroup>
+
+</Project>
