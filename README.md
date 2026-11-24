@@ -2,6 +2,12 @@
 
 Unit Manager is a Windows desktop application by Guaroa Software Corporation for finding files and folders, inspecting running processes, and diagnosing resource usage. It is built with C# and Windows Forms.
 
+## Download for Windows
+
+[Download Unit Manager for Windows x64 (ZIP)](https://raw.githubusercontent.com/guamen/Unit-Manager/master/Build/Unit-Manager-win-x64.zip).
+
+Extract the ZIP and open `Unit Manager.exe` from the extracted folder. The prebuilt app requires the **.NET 10 Desktop Runtime (x64)**.
+
 ## Requirements
 
 - Windows
