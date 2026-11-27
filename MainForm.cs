@@ -13,6 +13,8 @@ public partial class MainForm : Form
     private readonly FileSearchService _searchService = new();
     private readonly PcDiagnosticControl _diagnostic = new();
     private readonly TabPage _diagnosticTab = new("PC Diagnostics") { UseVisualStyleBackColor = true };
+    private readonly NetworkMonitorControl _networkMonitor = new();
+    private readonly TabPage _networkTab = new("Network Monitor") { UseVisualStyleBackColor = true };
     private CancellationTokenSource? _searchCts;
     private List<FileSystemItem> _allResults = [];
     private int _currentPage = 1;
@@ -65,13 +67,17 @@ public partial class MainForm : Form
     {
         InitializeComponent();
         _diagnosticTab.Controls.Add(_diagnostic);
+        _networkTab.Controls.Add(_networkMonitor);
         tabMain.TabPages.Add(_diagnosticTab);
+        tabMain.TabPages.Add(_networkTab);
         ApplyWorkspaceAppearance();
         InitializeFilterOptions();
         WireTaskManagerEvents();
     }
 
     internal void ShowDiagnosticTab() => tabMain.SelectedTab = _diagnosticTab;
+
+    internal void ShowNetworkTab() => tabMain.SelectedTab = _networkTab;
 
     private void ApplyWorkspaceAppearance()
     {
@@ -93,6 +99,7 @@ public partial class MainForm : Form
         WorkspaceTheme.StyleNavigation(tabMain);
         WorkspaceTheme.StyleButton(btnSearch, primary: true);
         _diagnostic.StylePrimaryAction();
+        _networkMonitor.StylePrimaryAction();
         ResumeLayout(performLayout: true);
     }
 
@@ -103,6 +110,8 @@ public partial class MainForm : Form
         UpdateFilterControlStates();
         RenderCurrentPage();
         taskManagerControl.SetMonitoringActive(tabMain.SelectedTab == tabPageTaskManager);
+        if (tabMain.SelectedTab == _networkTab)
+            _networkMonitor.OnTabActivated();
     }
 
     private async void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
@@ -117,8 +126,19 @@ public partial class MainForm : Form
             return;
         }
 
+        if (_networkMonitor.PendingDiagnosis is { IsCompleted: false } diagnosis)
+        {
+            e.Cancel = true;
+            _networkMonitor.CancelPendingDiagnosis();
+            await diagnosis;
+            if (!IsDisposed)
+                Close();
+            return;
+        }
+
         _searchCts?.Cancel();
         taskManagerControl.SetMonitoringActive(false);
+        _networkMonitor.StopMonitoring();
     }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -174,6 +194,8 @@ public partial class MainForm : Form
         bool isTaskManager = tabMain.SelectedTab == tabPageTaskManager;
         AcceptButton = tabMain.SelectedTab == tabPageSearch ? btnSearch : null;
         taskManagerControl.SetMonitoringActive(isTaskManager);
+        if (tabMain.SelectedTab == _networkTab)
+            _networkMonitor.OnTabActivated();
     }
 
     private void InitializeFilterOptions()

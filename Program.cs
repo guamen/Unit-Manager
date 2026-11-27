@@ -7,6 +7,7 @@ namespace FileViewer;
 internal static class Program
 {
     internal const string DiagnosticArgument = "--diagnostic";
+    internal const string NetworkArgument = "--network";
 
     internal static void RestartAsAdministrator(string? startupArgument = null)
     {
@@ -38,6 +39,9 @@ internal static class Program
             if (args.Any(arg => arg.Equals(DiagnosticArgument, StringComparison.OrdinalIgnoreCase)
                 || arg.Equals("--diagnostico", StringComparison.OrdinalIgnoreCase)))
                 form.ShowDiagnosticTab();
+            else if (args.Any(arg => arg.Equals(NetworkArgument, StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--red", StringComparison.OrdinalIgnoreCase)))
+                form.ShowNetworkTab();
             startup.MainForm = form;
             form.Show();
             splash.Close();
