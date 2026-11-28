@@ -1,0 +1,12 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+  <PropertyGroup>
+    <OutputType>Bundle</OutputType>
+    <OutputName>UnitManagerSetup</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <DefineConstants>AppVersion=$(AppVersion);MsiPath=$(MsiPath);RuntimeName=$(RuntimeName);RuntimeUrl=$(RuntimeUrl);RuntimeSize=$(RuntimeSize);RuntimeHash=$(RuntimeHash)</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Bal.wixext" Version="6.0.2" />
+    <PackageReference Include="WixToolset.Netfx.wixext" Version="6.0.2" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,22 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal"
+     xmlns:netfx="http://wixtoolset.org/schemas/v4/wxs/netfx">
+  <Bundle Name="Unit Manager" Manufacturer="Guaroa Software SRL" Version="$(var.AppVersion)"
+          UpgradeCode="AD310CE8-A3FE-45E7-B4CD-EFF1C8811068" IconSourceFile="../../Assets/UnitManager.ico">
+    <BootstrapperApplication>
+      <bal:WixStandardBootstrapperApplication Theme="hyperlinkLicense" LicenseUrl="" />
+    </BootstrapperApplication>
+
+    <netfx:DotNetCoreSearch RuntimeType="desktop" Platform="x64" MajorVersion="10" Variable="DesktopRuntime10" />
+
+    <Chain>
+      <ExePackage Id="DesktopRuntime" DisplayName=".NET 10 Desktop Runtime (x64)"
+                  DetectCondition="DesktopRuntime10 &gt;= v10.0.0" InstallArguments="/install /quiet /norestart"
+                  PerMachine="yes" Permanent="yes" Vital="yes">
+        <ExePackagePayload Name="$(var.RuntimeName)" DownloadUrl="$(var.RuntimeUrl)"
+                           Size="$(var.RuntimeSize)" Hash="$(var.RuntimeHash)" />
+      </ExePackage>
+      <MsiPackage SourceFile="$(var.MsiPath)" Vital="yes" />
+    </Chain>
+  </Bundle>
+</Wix>

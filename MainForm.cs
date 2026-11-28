@@ -84,17 +84,7 @@ public partial class MainForm : Form
         SuspendLayout();
         Padding = new Padding(14, 0, 14, 10);
         tabPageSearch.Padding = new Padding(8);
-        var brand = new Label
-        {
-            AutoSize = false,
-            Dock = DockStyle.Top,
-            Height = 47,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(10, 0, 0, 0),
-            Text = "Unit Manager",
-            Font = WorkspaceTheme.Heading
-        };
-        Controls.Add(brand);
+        AddApplicationMenu();
         WorkspaceTheme.Apply(this);
         WorkspaceTheme.StyleNavigation(tabMain);
         WorkspaceTheme.StyleButton(btnSearch, primary: true);

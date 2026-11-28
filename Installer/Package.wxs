@@ -1,0 +1,40 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:netfx="http://wixtoolset.org/schemas/v4/wxs/netfx">
+  <Package Name="Unit Manager" Manufacturer="Guaroa Software SRL" Version="$(var.AppVersion)"
+           UpgradeCode="EFC2D67D-14F4-4E61-88DC-4C612A2C1F50" Scope="perMachine">
+    <MediaTemplate EmbedCab="yes" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Unit Manager is already installed." />
+    <netfx:DotNetCompatibilityCheck Property="DESKTOPRUNTIMECHECK" RuntimeType="desktop"
+                                    Platform="x64" Version="10.0.0" RollForward="latestPatch" />
+    <Launch Condition='Installed OR DESKTOPRUNTIMECHECK = "0"'
+            Message="Unit Manager requires .NET 10 Desktop Runtime (x64). Run Unit Manager Setup.exe to install it automatically, or get it from https://dotnet.microsoft.com/download/dotnet/10.0." />
+    <Icon Id="UnitManager.ico" SourceFile="../Assets/UnitManager.ico" />
+    <Icon Id="UnitManager.exe" SourceFile="$(var.PublishDir)/Unit Manager.exe" />
+    <Property Id="ARPPRODUCTICON" Value="UnitManager.ico" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Unit Manager">
+        <Component Id="AppExecutable" Guid="DA95A94D-CF2F-4852-8A42-F4BA01A52C2C">
+          <File Source="$(var.PublishDir)/Unit Manager.exe" KeyPath="yes">
+            <Shortcut Id="UnitManagerShortcut" Directory="ProgramMenuFolder" Name="Unit Manager"
+                      WorkingDirectory="INSTALLFOLDER" Icon="UnitManager.exe" Advertise="yes" />
+          </File>
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="UnitManager" Title="Unit Manager">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="AppExecutable" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)/**/*">
+        <Exclude Files="$(var.PublishDir)/Unit Manager.exe" />
+      </Files>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

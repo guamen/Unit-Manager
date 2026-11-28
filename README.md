@@ -4,9 +4,14 @@ Unit Manager is a Windows desktop application by Guaroa Software Corporation for
 
 ## Download for Windows
 
-[Download Unit Manager for Windows x64 (ZIP)](https://raw.githubusercontent.com/guamen/Unit-Manager/master/Build/Unit-Manager-win-x64.zip).
+- [Windows x64 installer (Setup.exe)](https://raw.githubusercontent.com/guamen/Unit-Manager/master/Build/Unit-Manager-1.1.1-win-x64-Setup.exe)
+- [Windows x64 portable package (ZIP)](https://raw.githubusercontent.com/guamen/Unit-Manager/master/Build/Unit-Manager-1.1.1-win-x64.zip)
 
-Extract the ZIP and open `Unit Manager.exe` from the extracted folder. The prebuilt app requires the **.NET 10 Desktop Runtime (x64)**.
+Setup requires administrator permission and installs Unit Manager for all users. If the **.NET 10 Desktop Runtime (x64)** is missing, Setup downloads it from Microsoft, installs it, and continues with Unit Manager. This download requires an internet connection.
+
+For the portable package, extract the ZIP and open `Unit Manager.exe`. If the required runtime is missing, the Windows .NET launcher offers a Microsoft download. Install the runtime and reopen `Unit Manager.exe`.
+
+Choose **About → Check for updates** to compare your version with the latest published build. For an installed copy, close Unit Manager and run the newer Setup to upgrade. For a portable copy, extract the new ZIP to a new folder.
 
 ## Requirements
 
@@ -37,3 +42,13 @@ dotnet run --project FileViewer.csproj -- --diagnostic
 - **PC Diagnostics** samples CPU, RAM, disk reads and writes, and incoming and outgoing traffic. Select a column header to sort, or filter the table to processes that host services. Each row reports usage for the entire process. Internet usage is estimated from traffic involving public IP addresses. The app may recommend lowering an application's CPU priority or requesting that it close. Applying either action requires confirmation.
 
 Choose **Run as administrator** in **PC Diagnostics** for disk and network measurements. Unit Manager closes the previous instance after Windows starts the elevated one.
+
+## Prepare a release
+
+Set the new `Version` in `FileViewer.csproj` and run:
+
+```powershell
+.\Build\Publish-Release.ps1
+```
+
+The script builds the Windows x64 ZIP, Setup executable, and standalone MSI, then writes `Build/latest.json`. Commit the packages and manifest together on `master` so the update check can offer the new version. Update the download links above to match the release.

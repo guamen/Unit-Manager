@@ -9,6 +9,7 @@
     <AssemblyName>Unit Manager</AssemblyName>
     <RootNamespace>FileViewer</RootNamespace>
     <Product>Unit Manager</Product>
+    <Version>1.1.1</Version>
     <ApplicationIcon>Assets/UnitManager.ico</ApplicationIcon>
   </PropertyGroup>
 
