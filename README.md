@@ -4,8 +4,8 @@ Unit Manager is a Windows desktop application by Guaroa Software Corporation for
 
 ## Download for Windows
 
-- [Windows x64 installer (Setup.exe)](https://raw.githubusercontent.com/guamen/Unit-Manager/master/Build/Unit-Manager-1.1.1-win-x64-Setup.exe)
-- [Windows x64 portable package (ZIP)](https://raw.githubusercontent.com/guamen/Unit-Manager/master/Build/Unit-Manager-1.1.1-win-x64.zip)
+- [Windows x64 installer (Setup.exe)](https://raw.githubusercontent.com/guamen/Unit-Manager/main/Build/Unit-Manager-1.1.2-win-x64-Setup.exe)
+- [Windows x64 portable package (ZIP)](https://raw.githubusercontent.com/guamen/Unit-Manager/main/Build/Unit-Manager-1.1.2-win-x64.zip)
 
 Setup requires administrator permission and installs Unit Manager for all users. If the **.NET 10 Desktop Runtime (x64)** is missing, Setup downloads it from Microsoft, installs it, and continues with Unit Manager. This download requires an internet connection.
 
@@ -43,6 +43,8 @@ dotnet run --project FileViewer.csproj -- --diagnostic
 
 Choose **Run as administrator** in **PC Diagnostics** for disk and network measurements. Unit Manager closes the previous instance after Windows starts the elevated one.
 
+**Network Monitor** automatically saves a CSV for each monitoring session. The filename includes the local start time down to milliseconds. The CSV receives each displayed sample, normally every five seconds, until you choose **Stop Monitoring**. Use **Open Logs** to find the saved files.
+
 ## Prepare a release
 
 Set the new `Version` in `FileViewer.csproj` and run:
@@ -51,4 +53,4 @@ Set the new `Version` in `FileViewer.csproj` and run:
 .\Build\Publish-Release.ps1
 ```
 
-The script builds the Windows x64 ZIP, Setup executable, and standalone MSI, then writes `Build/latest.json`. Commit the packages and manifest together on `master` so the update check can offer the new version. Update the download links above to match the release.
+The script builds the Windows x64 ZIP, Setup executable, and standalone MSI, then writes `Build/latest.json`. Commit the packages and manifest together on `main` so the update check can offer the new version. Update the download links above to match the release.
