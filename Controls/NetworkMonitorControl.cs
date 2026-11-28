@@ -23,7 +23,6 @@ internal sealed class NetworkMonitorControl : UserControl
     private readonly List<NetworkSample> _samples = [];
 
     private readonly Button _btnToggleMonitor = new() { Text = "Start Monitoring", AutoSize = true };
-    private readonly CheckBox _chkEnableLog = new() { Text = "Enable diagnostic log (every 5s)", AutoSize = true };
     private readonly ComboBox _cmbWindow = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 128 };
     private readonly CheckBox _chkOverlayLocal = new() { Text = "Show local PC usage", AutoSize = true, Checked = true };
     private readonly Button _btnLoadLog = new() { Text = "Load Log...", AutoSize = true };
@@ -54,12 +53,11 @@ internal sealed class NetworkMonitorControl : UserControl
     private CancellationTokenSource? _diagnosisCts;
     private NetworkDiagnosisReport? _lastReport;
     private bool _hasAutoStarted;
-    private bool _userStoppedMonitoring;
     private int _loggedSamplesCount;
 
     public Task? PendingDiagnosis { get; private set; }
 
-    public bool IsMonitoring => _monitorLoopTask is { IsCompleted: false };
+    public bool IsMonitoring => _monitorCts is not null;
 
     public NetworkMonitorControl()
     {
@@ -82,7 +80,6 @@ internal sealed class NetworkMonitorControl : UserControl
             WrapContents = true,
             Padding = new Padding(2, 4, 2, 2)
         };
-        _chkEnableLog.Margin = new Padding(10, 6, 10, 3);
         _chkOverlayLocal.Margin = new Padding(10, 6, 8, 3);
         _cmbWindow.Margin = new Padding(4, 3, 6, 3);
 
@@ -90,7 +87,6 @@ internal sealed class NetworkMonitorControl : UserControl
         toolbar.Controls.AddRange(
         [
             _btnToggleMonitor,
-            _chkEnableLog,
             lblWindow,
             _cmbWindow,
             _chkOverlayLocal,
@@ -116,7 +112,7 @@ internal sealed class NetworkMonitorControl : UserControl
             Margin = new Padding(3, 2, 3, 6)
         };
         metricsCard.Controls.Add(_lblMetrics);
-        _lblMetrics.Text = "Ready — Click Start Monitoring or enable the 5-second diagnostic log to track Internet speed and network usage.";
+        _lblMetrics.Text = "Start monitoring to record a sample every five seconds.";
 
         // Chart container
         _chart.Margin = new Padding(3, 2, 3, 6);
@@ -195,11 +191,7 @@ internal sealed class NetworkMonitorControl : UserControl
         if (!_hasAutoStarted)
         {
             _hasAutoStarted = true;
-            LoadTodayLogIfPresent();
-            if (!_userStoppedMonitoring)
-            {
-                StartMonitoring();
-            }
+            StartMonitoring();
         }
     }
 
@@ -234,48 +226,22 @@ internal sealed class NetworkMonitorControl : UserControl
 
     private void WireEvents()
     {
-        _btnToggleMonitor.Click += (_, _) =>
+        _btnToggleMonitor.Click += async (_, _) =>
         {
             if (IsMonitoring)
             {
-                _userStoppedMonitoring = true;
+                _btnToggleMonitor.Enabled = false;
                 StopMonitoring();
-                _lblStatus.Text = "Monitoring paused. Click Start Monitoring to resume 5-second measurements.";
+                _lblStatus.Text = "Monitoring stopped. The CSV is available in Open Logs.";
+                if (_monitorLoopTask is { } loop)
+                    await loop;
+                if (!IsDisposed)
+                    _btnToggleMonitor.Enabled = true;
             }
             else
             {
-                _userStoppedMonitoring = false;
                 StartMonitoring();
             }
-        };
-
-        _chkEnableLog.CheckedChanged += (_, _) =>
-        {
-            if (_chkEnableLog.Checked)
-            {
-                try
-                {
-                    _logger.EnsureLogDirectory();
-                    if (!IsMonitoring)
-                    {
-                        _userStoppedMonitoring = false;
-                        StartMonitoring();
-                    }
-
-                    _lblStatus.Text = $"Diagnostic log enabled — recording every {SampleIntervalSeconds}s to {_logger.CurrentLogFilePath}";
-                }
-                catch (Exception ex)
-                {
-                    _chkEnableLog.Checked = false;
-                    _lblStatus.Text = $"Could not initialize log file: {ex.Message}";
-                }
-            }
-            else
-            {
-                _lblStatus.Text = "Diagnostic log disabled. Live monitoring continues without writing to disk.";
-            }
-
-            UpdateMetricsBar();
         };
 
         _cmbWindow.SelectedIndexChanged += (_, _) => RefreshChart();
@@ -324,25 +290,35 @@ internal sealed class NetworkMonitorControl : UserControl
 
     private void StartMonitoring()
     {
-        if (IsMonitoring || IsDisposed)
+        if (IsMonitoring || IsDisposed || _monitorLoopTask is { IsCompleted: false })
         {
             return;
         }
 
-        _monitorCts?.Dispose();
+        string logPath;
+        try
+        {
+            logPath = _logger.StartSession(DateTime.Now);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _lblStatus.Text = $"Could not create the diagnostic log: {ex.Message}";
+            return;
+        }
+
+        _loggedSamplesCount = 0;
         _monitorCts = new CancellationTokenSource();
         CancellationToken token = _monitorCts.Token;
 
         _service.StartProcessTrafficCapture();
         _btnToggleMonitor.Text = "Stop Monitoring";
-        _lblStatus.Text = _chkEnableLog.Checked
-            ? $"Monitoring & logging every {SampleIntervalSeconds}s to {_logger.CurrentLogFilePath}"
-            : $"Live monitoring active (every {SampleIntervalSeconds}s). Enable the diagnostic log checkbox to record to disk.";
+        _lblStatus.Text = $"Recording every {SampleIntervalSeconds}s to {Path.GetFileName(logPath)}.";
+        UpdateMetricsBar();
 
-        _monitorLoopTask = RunMonitoringLoopAsync(token);
+        _monitorLoopTask = RunMonitoringLoopAsync(logPath, token);
     }
 
-    private async Task RunMonitoringLoopAsync(CancellationToken token)
+    private async Task RunMonitoringLoopAsync(string logPath, CancellationToken token)
     {
         while (!token.IsCancellationRequested && !IsDisposed)
         {
@@ -355,17 +331,14 @@ internal sealed class NetworkMonitorControl : UserControl
                     break;
                 }
 
-                if (_chkEnableLog.Checked)
+                try
                 {
-                    try
-                    {
-                        _logger.AppendSample(sample);
-                        _loggedSamplesCount++;
-                    }
-                    catch (Exception ex)
-                    {
-                        _lblStatus.Text = $"Log write warning: {ex.Message}";
-                    }
+                    _logger.AppendSample(logPath, sample);
+                    _loggedSamplesCount++;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _lblStatus.Text = $"Log write warning: {ex.Message}";
                 }
 
                 AddSampleToView(sample);
@@ -376,7 +349,7 @@ internal sealed class NetworkMonitorControl : UserControl
             }
             catch (Exception ex)
             {
-                if (!IsDisposed)
+                if (!token.IsCancellationRequested && !IsDisposed)
                 {
                     _lblStatus.Text = $"Measurement error: {ex.Message}";
                 }
@@ -467,16 +440,13 @@ internal sealed class NetworkMonitorControl : UserControl
     {
         if (_samples.Count == 0)
         {
-            string logBadge = _chkEnableLog.Checked ? "Log: ON" : "Log: OFF";
-            _lblMetrics.Text = $"Waiting for first 5-second sample…  ·  {logBadge}";
+            _lblMetrics.Text = IsMonitoring ? "Waiting for the first sample…" : "Monitoring stopped.";
             return;
         }
 
         NetworkSample latest = _samples[^1];
-        string logState = _chkEnableLog.Checked
-            ? $"Log: ON ({_loggedSamplesCount:N0} written)"
-            : "Log: OFF";
-        string state = IsMonitoring ? "Live (5s)" : "Paused";
+        string logState = $"Log: {_loggedSamplesCount:N0} saved";
+        string state = IsMonitoring ? "Live (5s)" : "Stopped";
         string etwNote = _service.IsEtwTrackingActive ? "ETW" : "Conns";
 
         _lblMetrics.Text =
@@ -486,26 +456,6 @@ internal sealed class NetworkMonitorControl : UserControl
             $"Internet Ping: {latest.InternetPingDisplay} (Jitter {latest.JitterDisplay}, Loss {latest.PacketLossDisplay})  ·  " +
             $"Link: {latest.LinkDisplay}  ·  " +
             $"Top ({etwNote}): {latest.TopProcess}  ·  {logState}";
-    }
-
-    private void LoadTodayLogIfPresent()
-    {
-        try
-        {
-            List<NetworkSample> todaySamples = _logger.LoadTodaySamples();
-            if (todaySamples.Count == 0)
-            {
-                return;
-            }
-
-            PopulateSamples(todaySamples);
-            _loggedSamplesCount = todaySamples.Count;
-            _lblStatus.Text = $"Loaded {todaySamples.Count:N0} existing sample(s) from today's log ({Path.GetFileName(_logger.CurrentLogFilePath)}).";
-        }
-        catch
-        {
-            // Ignore unreadable log on startup.
-        }
     }
 
     private void LoadSavedLogFiles()

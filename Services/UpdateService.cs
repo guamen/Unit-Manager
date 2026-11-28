@@ -12,7 +12,7 @@ internal sealed record AvailableRelease(Version Version, bool HasInstaller, bool
 
 internal static class UpdateService
 {
-    internal static readonly Uri BuildUri = new("https://raw.githubusercontent.com/guamen/Unit-Manager/master/Build/");
+    internal static readonly Uri BuildUri = new("https://raw.githubusercontent.com/guamen/Unit-Manager/main/Build/");
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromSeconds(10) };
     private static readonly Version AssemblyVersion = typeof(UpdateService).Assembly.GetName().Version!;
     public static Version CurrentVersion { get; } = new(AssemblyVersion.Major, AssemblyVersion.Minor, AssemblyVersion.Build);

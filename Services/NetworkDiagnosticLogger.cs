@@ -25,29 +25,39 @@ internal sealed class NetworkDiagnosticLogger
             : logDirectory;
     }
 
-    public string GetLogFilePathForDate(DateTime date) =>
-        Path.Combine(LogDirectory, $"network-log-{date:yyyy-MM-dd}.csv");
-
-    public string CurrentLogFilePath => GetLogFilePathForDate(DateTime.Now);
-
     public void EnsureLogDirectory() => Directory.CreateDirectory(LogDirectory);
 
-    public void AppendSample(NetworkSample sample)
+    public string StartSession(DateTime startedAt)
     {
-        string path = GetLogFilePathForDate(sample.Timestamp);
+        EnsureLogDirectory();
+        string timestamp = startedAt.ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture);
+        for (int index = 0; ; index++)
+        {
+            string suffix = index == 0 ? string.Empty : $"-{index}";
+            string path = Path.Combine(LogDirectory, $"network-log-{timestamp}{suffix}.csv");
+            FileStream stream;
+            try
+            {
+                stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+            }
+            catch (IOException ex) when ((ex.HResult & 0xffff) is 80 or 183)
+            {
+                continue;
+            }
+            using var writer = new StreamWriter(stream);
+            writer.WriteLine(CsvHeader);
+            return path;
+        }
+    }
+
+    public void AppendSample(string path, NetworkSample sample)
+    {
         lock (_fileLock)
         {
-            Directory.CreateDirectory(LogDirectory);
-            bool writeHeader = !File.Exists(path) || new FileInfo(path).Length == 0;
-            using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
-            using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-            if (writeHeader)
-            {
-                writer.WriteLine(CsvHeader);
-            }
-
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.Read);
+            stream.Seek(0, SeekOrigin.End);
+            using var writer = new StreamWriter(stream);
             writer.WriteLine(FormatCsvRow(sample));
-            writer.Flush();
         }
     }
 
@@ -82,12 +92,6 @@ internal sealed class NetworkDiagnosticLogger
         }
 
         return samples;
-    }
-
-    public List<NetworkSample> LoadTodaySamples()
-    {
-        string path = CurrentLogFilePath;
-        return File.Exists(path) ? LoadSamplesFromFile(path) : [];
     }
 
     private static string FormatCsvRow(NetworkSample s)
